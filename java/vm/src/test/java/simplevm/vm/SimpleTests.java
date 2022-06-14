@@ -71,4 +71,17 @@ class SimpleTests {
         // If we got here, with no exception, we're good
         assertTrue(vm != null);
     }
+    @Test void testTrace() {
+        VirtualMachine vm = new VirtualMachine();
+
+        int[] code = {
+            Bytecode.CONST, 43,
+            Bytecode.NOP,
+            Bytecode.DUMP
+        };
+        vm.execute(code);
+
+        // If we got here, with no exception, we're good
+        assertTrue(true);
+    }
 }
