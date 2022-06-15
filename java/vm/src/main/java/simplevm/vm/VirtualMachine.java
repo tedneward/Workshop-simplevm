@@ -28,9 +28,9 @@ public class VirtualMachine {
     private void dump() {
         System.out.println("SimpleVM DUMP");
         System.out.println("=============");
-        /*
         System.out.println("IP: " + ip);
         System.out.println("Working stack (SP " + sp + "): " + Arrays.toString(Arrays.copyOfRange(stack, 0, sp+1)));
+        /*
         System.out.println("Globals: " + Arrays.toString(globals));
         System.out.println("Call stack: ");
         for (int f = frames.size(); f != 0; f--) {
@@ -42,10 +42,90 @@ public class VirtualMachine {
         */
     }
 
-    public void execute(int opcode, int... operands) {
-
+    // Stack management
+    //
+    int sp = -1;
+    int[] stack = new int[100];
+    int[] getStack() {
+        if (sp > -1)
+            return Arrays.copyOf(stack, sp+1);
+        else
+            return new int[] { };
     }
-    public void execute(int[] code) {
+    public void push(int value) {
+        stack[++sp] = value;
+        trace("---> pushed " + value + "; stack: " + Arrays.toString(Arrays.copyOfRange(stack, 0, sp+1)));
+    }
+    public int pop() {
+        int result = stack[sp--];
+        trace("---> popped ; stack: " + Arrays.toString(Arrays.copyOfRange(stack, 0, sp+1)));
+        return result;
+    }
 
+    public void execute(int opcode, int... operands) {
+        switch (opcode) {
+            case NOP:
+                // Do nothing!
+                trace("NOP");
+                break;
+            case DUMP:
+                trace("DUMP");
+                dump();
+                break;
+            case TRACE:
+                trace = !trace;
+                trace("TRACE");
+                break;
+            case PRINT:
+                trace("PRINT");
+                System.out.println(pop());
+                break;
+            case FATAL:
+                trace("FATAL");
+                throw new Exception("FATAL bytecode executed at " + ip);
+            
+            case CONST:
+                trace("CONST " + operands[0]);
+                push(operands[0]);
+                break;
+            case POP:
+                trace("POP");
+                pop();
+                break;
+        }
+    }
+    int ip = 0;
+    public void execute(int[] code) {
+        for (ip = 0; ip < code.length; )
+        {
+            switch (code[ip])
+            {
+                case HALT:
+                    trace("HALT at " + ip);
+                    return;
+
+                // 0-operand opcodes
+                case NOP:
+                case TRACE:
+                case DUMP:
+                case PRINT:
+                case FATAL:
+                case POP:
+                    execute(code[ip]);
+                    break;
+                
+                // 1-operand opcodes
+                case CONST:
+                    execute(code[ip], code[++ip]);
+                    break;
+
+                // 2-operand (or more) opcodes
+
+                // Unknown
+                default:
+                    throw new Exception("Unrecognized opcode: " + code[ip]);
+            }
+            ip++;
+        }
     }
 }

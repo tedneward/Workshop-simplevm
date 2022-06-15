@@ -10,23 +10,23 @@ public class StackTests
     {
         VirtualMachine vm = new VirtualMachine();
 
-        //vm.Push(27);
+        vm.Push(27);
 
-        //Assert.AreEqual(1, vm.Stack.Length);
-        //Assert.AreEqual(27, vm.Stack[0]);
+        Assert.AreEqual(1, vm.Stack.Length);
+        Assert.AreEqual(27, vm.Stack[0]);
     }
     [TestMethod]
     public void TestPushPop()
     {
         VirtualMachine vm = new VirtualMachine();
 
-        //vm.Push(27);
-        //Assert.AreEqual(1, vm.Stack.Length);
+        vm.Push(27);
+        Assert.AreEqual(1, vm.Stack.Length);
 
-        //int value = vm.Pop();
+        int value = vm.Pop();
 
-        //Assert.AreEqual(27, value);
-        //Assert.AreEqual(0, vm.Stack.Length);
+        Assert.AreEqual(27, value);
+        Assert.AreEqual(0, vm.Stack.Length);
     }
     [TestMethod]
     public void TestCONST()
@@ -38,9 +38,9 @@ public class StackTests
             Bytecode.CONST, (Bytecode)27,
         });
 
-        //Assert.AreEqual(2, vm.Stack.Length);
-        //Assert.AreEqual(34, vm.Stack[0]);
-        //Assert.AreEqual(27, vm.Stack[1]);
+        Assert.AreEqual(2, vm.Stack.Length);
+        Assert.AreEqual(34, vm.Stack[0]);
+        Assert.AreEqual(27, vm.Stack[1]);
     }
     [TestMethod]
     public void TestCONSTPOP()
@@ -52,6 +52,6 @@ public class StackTests
             Bytecode.POP,
         });
 
-        //Assert.AreEqual(0, vm.Stack.Length);
+        Assert.AreEqual(0, vm.Stack.Length);
     }
 }

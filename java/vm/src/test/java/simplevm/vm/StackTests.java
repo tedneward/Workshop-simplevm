@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static simplevm.vm.Bytecode.*;
+
 public class StackTests {
     @Test void testPushPop() {
         VirtualMachine vm = new VirtualMachine();
@@ -27,9 +29,9 @@ public class StackTests {
             CONST, 27,
         });
 
-        //assertEquals(2, vm.getStack().length);
-        //assertEquals(34, vm.getStack()[0]);
-        //assertEquals(27, vm.getStack()[1]);
+        assertEquals(2, vm.getStack().length);
+        assertEquals(34, vm.getStack()[0]);
+        assertEquals(27, vm.getStack()[1]);
     }
     @Test void TestCONSTPOP()
     {
@@ -40,6 +42,6 @@ public class StackTests {
             POP,
         });
 
-        //assertEquals(0, vm.getStack().length);
+        assertEquals(0, vm.getStack().length);
     }
 }
