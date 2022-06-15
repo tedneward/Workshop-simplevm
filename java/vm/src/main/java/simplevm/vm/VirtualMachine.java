@@ -92,7 +92,68 @@ public class VirtualMachine {
                 trace("POP");
                 pop();
                 break;
-        }
+
+            // Binary math operations
+            case ADD:
+            {
+                trace("ADD");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs + rhs);
+                break;
+            }
+            case SUB:
+            {
+                trace("SUB");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs - rhs);
+                break;
+            }
+            case MUL:
+            {
+                trace("MUL");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs * rhs);
+                break;
+            }
+            case DIV:
+            {
+                trace("DIV");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs / rhs);
+                break;
+            }
+            case MOD:
+            {
+                trace("ADD");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs % rhs);
+                break;
+            }
+            // Unary math operations
+            case ABS:
+                trace("ABS");
+                push(Math.abs(pop()));
+                break;
+            case NEG:
+                trace("NEG");
+                push(- pop());
+                break;
+            }
     }
     int ip = 0;
     public void execute(int[] code) {
@@ -111,12 +172,21 @@ public class VirtualMachine {
                 case PRINT:
                 case FATAL:
                 case POP:
+                case ADD:
+                case SUB:
+                case MUL:
+                case DIV:
+                case MOD:
+                case ABS:
+                case NEG:
                     execute(code[ip]);
+                    ip++;
                     break;
                 
                 // 1-operand opcodes
                 case CONST:
-                    execute(code[ip], code[++ip]);
+                    execute(code[ip], code[ip + 1]);
+                    ip += 2;
                     break;
 
                 // 2-operand (or more) opcodes
@@ -125,7 +195,6 @@ public class VirtualMachine {
                 default:
                     throw new Exception("Unrecognized opcode: " + code[ip]);
             }
-            ip++;
         }
     }
 }

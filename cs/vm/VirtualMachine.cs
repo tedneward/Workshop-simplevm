@@ -69,11 +69,8 @@ public class VirtualMachine
     {
         Console.WriteLine("SimpleVM - DUMP");
         Console.WriteLine("===============");
-        // Uncomment when you implement Execute(Bytecode[])
-        /*
         Console.WriteLine("IP: {0} / Trace: {1}", IP, trace);
         Console.WriteLine("Working stack (SP {0}): {1}", SP, String.Join(", ", Stack));
-        */
         // Uncomment when you implement global values
         /*
         Console.WriteLine("Globals: {0}", Globals);
@@ -147,6 +144,63 @@ public class VirtualMachine
                 // throw away returned value
                 Pop();
                 break;
+
+            // Mathematical ops
+            case Bytecode.ADD:
+            {
+                Trace("ADD");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs + rhs);
+                break;
+            }
+            case Bytecode.SUB:
+            {
+                Trace("SUB");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs - rhs);
+                break;
+            }
+            case Bytecode.MUL:
+            {
+                Trace("MUL");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs * rhs);
+                break;
+            }
+            case Bytecode.DIV:
+            {
+                Trace("DIV");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs / rhs);
+                break;
+            }
+            case Bytecode.MOD:
+            {
+                Trace("MOD");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs % rhs);
+                break;
+            }
+            case Bytecode.ABS:
+            {
+                Trace("ABS");
+                int val = Pop();
+                Push(Math.Abs(val));
+                break;
+            }
+            case Bytecode.NEG:
+            {
+                Trace("NEG");
+                int val = Pop();
+                Push(-val);
+                break;
+            }
+            
         }
     }
     int IP = -1;
