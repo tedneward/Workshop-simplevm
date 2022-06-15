@@ -71,7 +71,7 @@ class SimpleTests {
         // If we got here, with no exception, we're good
         assertTrue(vm != null);
     }
-    @Test void testTrace() {
+    @Test void testMoreDump() {
         VirtualMachine vm = new VirtualMachine();
 
         int[] code = {
