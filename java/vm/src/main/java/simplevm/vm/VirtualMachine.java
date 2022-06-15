@@ -112,11 +112,13 @@ public class VirtualMachine {
                 case FATAL:
                 case POP:
                     execute(code[ip]);
+                    ip++;
                     break;
                 
                 // 1-operand opcodes
                 case CONST:
-                    execute(code[ip], code[++ip]);
+                    execute(code[ip], code[ip + 1]);
+                    ip += 2;
                     break;
 
                 // 2-operand (or more) opcodes
@@ -125,7 +127,6 @@ public class VirtualMachine {
                 default:
                     throw new Exception("Unrecognized opcode: " + code[ip]);
             }
-            ip++;
         }
     }
 }
