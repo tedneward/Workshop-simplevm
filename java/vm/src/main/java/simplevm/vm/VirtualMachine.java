@@ -28,9 +28,10 @@ public class VirtualMachine {
     private void dump() {
         System.out.println("SimpleVM DUMP");
         System.out.println("=============");
+        /*
         System.out.println("IP: " + ip);
-        System.out.println("Globals: " + Arrays.toString(globals));
         System.out.println("Working stack (SP " + sp + "): " + Arrays.toString(Arrays.copyOfRange(stack, 0, sp+1)));
+        System.out.println("Globals: " + Arrays.toString(globals));
         System.out.println("Call stack: ");
         for (int f = frames.size(); f != 0; f--) {
             CallFrame cf = frames.get(f - 1);
@@ -38,6 +39,7 @@ public class VirtualMachine {
             System.out.println("  +-- Return Address: " + cf.returnAddress);
             System.out.println("  +-- Locals: " + Arrays.toString(cf.locals));
         }
+        */
     }
 
     public void execute(int opcode, int... operands) {
