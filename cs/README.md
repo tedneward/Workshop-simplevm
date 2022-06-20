@@ -15,45 +15,77 @@ If you use `Console.WriteLine` to display output, the standard test runner will 
 ## Running the app
 `dotnet run --project app` from the top-level directory will run the app, or drop into the `app` directory and do a `dotnet run` from there.
 
-## Step 2: Comparisons and Branching
-`git checkout step-2`
+## Step 3: Global storage
+`git checkout step-3`
 
-Any programmatic environment needs to have the ability to evaluate values and take differing actions depending on the result of that comparison. This means we have two need categories of bytecode we need to implement: comparison operations, which will take values off the stack, evaluate them, and push a result (1 for true, 0 for false) back onto the stack, and branching operations, will will change the instruction pointer to tell the virtual machine to execute a different bytecode instruction next.
+Globals may seem a strange thing to implement next, but they help round out the last bits of a functional virtual machine: variable storage and retrieval.
 
-As we will see, it is often convenient (and common) to combine comparison and branching operations together into single opcodes, and/or to have multiple varieties of comparison operations. We will start with fundamentals, and then build out some convenience opcodes from there.
+> **NOTE:** Despite the negative connotations that might be associated with the term "globals", global storage is present in every virtual machine of note, though it is often used for purposes not directly identified. In the JVM, for example, it is in "global storage" areas that static variables are stored (which is what allows them to survive indefinitely if they are objects). Take care to differentiate this "static storage" from general-purpose "heap" storage--that is typically a different sort of storage altogether, and is typically managed automatically (aka garbage-collected).
 
-* The simplest comparison operation is equality--take two values off the stack, and if they are equal, push a "1" onto the stack, otherwise push "0". Call the opcode `EQ`. While you're at it, implement the inverse operation, `NEQ`, to test for not-equals.
-* The next-simplest comparisons are the relative ones: greater-than (`GT`) and less-than (`LT`). Again, like `SUB`, these require positional sensitivity; `1 < 2` is different from `1 > 2`.
-* Similar sorts of comparison operations are combinations of these: greater-than-or-equals (`GTE`), less-than-or-equals (`LTE`), and so on.
+There's only two points of implementation required to give us global storage:
 
-This is a pretty good collection of comparison opcodes.
+* Implement the storage mechanism itself. In the case of simplevm, we will use another fixed-size array of 32 integers to represent all the global storage we will want or need. Create this array as a field (`globals`) in the `VirtualMachine`, and create a method (`getGlobals`) to access the array by index to load/store values.
 
-Next let's do some branching opcodes, the easiest of which is `JMP` (an unconditional goto), which will take one operand: the address to jump to. In our simplified bytecode set, that "address" will be the 0-indexed index of the instruction in the array of bytecode, and will be passed in as an operand to the opcode. Thus, `JMP 6` means to jump to the 7th element (`code[6]`) in the bytecode array and execute it next.
+> **NOTE:** If this were a longer-lived, more-sophisticated system, we might create some conventions around specific use-cases for certain indices of these globals, effectively turning them into general-purpose registers. In fact, given the way we've implemented the stack pointer, it wouldn't be that hard to make the decision that `globals[0]` is the stack pointer, and refactor all of the `sp`-related code accordingly. That way, if there are any additional "registers" we feel like implementing, we need only set the convention accordingly.
 
-> **NOTE**: The absolute nature of the jump target allows us (either deliberately or accidentally) to jump to an operand rather than an opcode--for example, consider the sequence "CONST 5 JMP 1", which would push a 0 onto the stack, then jump to the second element in the array (which is the operand `5` to the `CONST` instruction), and execute it as if it were bytecode (which is the `PRINT` instruction) before continuing on and JMPing again... This is, in fact, doable under a number of assembly languages, and for a time being able to jump into the middle of an instruction and have it execute correctly was considered a hallmark of the master programmer. (Most of the rest of us considered it insane in the extreme.)
+* Implement the `GSTORE` and `GLOAD` opcodes. `GSTORE` takes an index (into the globals array) and stores the top of the stack into that global; `GLOAD` also takes an index, and pushes the value found at that index in the globals array onto the operations stack.
 
-We can also implement "indirect" jumps, which jumps to a location as specified at runtime rather than at the time the bytecode was written ("compile-time").
+## Interlude: Write some bytecode!
+The addition of globals to the system gives us pretty much all the basics we need to do some more-extensive tests/experiments. Consider some of the bytecode patterns displayed below, and explore what additional ones you could write. (Note: No guarantees that these all work without bugs--writing assembly is not easy!)
 
-* Implement `JMPI`, an "indirect jump", which jumps to the location specified by the value at the top of the stack. So `CONST 0 JMPI` jumps back to the very start of the bytecode (location 0).
+* Even or odd (if/then/else)
 
-Sometimes calculating the absolute positions of where to jump is hard, so it's easier to have the bytecode take jump target locations that are relative to the current position.)
+    ```
+    /* 0*/ CONST, 5,  // Define the value to be tested
+    /* 2*/ CONST, 2,  // Push 2 
+    /* 4*/ MOD,       // Mod
+    /* 5*/ DUMP,      // Let's see what's on the stack
+    /* 6*/ JZ, 9,     // If it's 0, it divided evenly
+    /* 8*/ FATAL,     // 5 % 2 shouldn't be 0!
+    /* 9*/ NOP
+    ```
 
-* Implement `RJMP`, which is a "relative jump", which jumps a number of bytecode positions (positive or negative) from its current location. So `RJMP -1` would jump back to the instruction previous to the RJMP, and `RJMP 1` would jump to the next instruction (which would really accomplish the exact same thing as doing nothing). Keep in mind that `RJMP 0` would effectively be an infinite loop--we just keep jumping to the same instruction. (What you do with that knowledge is up to you--is that an error? A fatal error? A desirable outcome?)
-* Additionally, it can be helpful to jump "indirectly" to a "relative" location, so implement `RJMPI`, which jumps a number of bytecode positions relative to the current location by the amount specified at the top of the stack. So `CONST 5 RJMPI` means to pop the stack and examine the value; since it's 5, jump 5 positions ahead of the current location. Similarly, `CONST -5 RJMPI` would jump -5 spots.
+* 3... 2... 1... blastoff (do/while): count down from 5 to 0
 
-Once that's done...
+    ```
+    /* 0*/ GSTORE, 0,   // move count into globals[0]
+    /* 2*/ GLOAD, 0,    // print globals[0]
+    /* 4*/ PRINT,       // 
+    /* 5*/ GLOAD, 0,    // globals[0]
+    /* 7*/ CONST, 0,    // 0
+    /* 9*/ EQ,          // globals[0] == 0 ?
+    /*10*/ JNZ, 20,     // jump to end
+    /*12*/ GLOAD, 0,    // globals[0] = globals[0] - 1
+    /*14*/ CONST, 1,    // 
+    /*15*/ SUB,
+    /*17*/ GSTORE, 0,
+    /*19*/ JMP, 2,      // jump to top of loop
+    /*20*/ NOP          // all done
+    ```
 
-* Implement `JZ`, a jump-if-zero bytecode, which combines a `EQ 0` with a `JMP`. It should take one operand (the index to jump to if the top value on the stack is zero). (This is sometimes called "JF"/jump-if-false in some bytecode sets.)
-* Implement `JNZ`, a jump-if-not-zero bytecode, which jumps if the top-of-the-stack is NOT zero. (This is sometimes called "JT"/jump-if-true in some bytecode sets.)
+* Factorial (non-recursive)
 
-*Optional:* Some bytecode sets don't care for the word "jump", preferring "branch" instead. Since the only real value we care about is the integer value behind an opcode, you can create "aliases" in the `Bytecode` type by giving two mnemonics to the same value. So, for example, you can easily add "branch-if-true" as `BRT` in the Bytecode by giving it the exact same integer value as `JNZ` (such as writing `BRT = JNZ,` inside the `Bytecode` enumeration). Whether "branch" should take absolute addresses or relative ones is, of course, up to you.
-
-*Optional:* Implement the following "shortcut" compare-and-branch instructions:
-
-* `JEQ` "jump-if-equal": combine the `EQ` and `JT` opcodes. The top of stack (`SP`) holds the absolute address to jump to, and the next two stack operands (`SP - 1` and `SP - 2`) are the two values to compare for equality, pushed in left-to-right order (so left is at `SP - 2` and right is at `SP - 1`).
-* `JNEQ` "jump-if-not-equal": combine the `NEQ` and `JT` opcodes. The top of stack (`SP`) holds the absolute address to jump to, and the next two stack operands (`SP - 1` and `SP - 2`) are the two values to compare for equality, pushed in left-to-right order (so left is at `SP - 2` and right is at `SP - 1`).
-* `JGT` "jump-if-greater-than": combine the `GT` and `JT` opcodes. The top of stack (`SP`) holds the absolute address to jump to, and the next two stack operands (`SP - 1` and `SP - 2`) are the two values to compare, pushed in left-to-right order (so left is at `SP - 2` and right is at `SP - 1`). Jump only if left (`SP - 2`) is greater-than right (`SP - 1`).
-* `JGTE` "jump-if-greater-than-or-equal": combine the `GTE` and `JT` opcodes. The top of stack (`SP`) holds the absolute address to jump to, and the next two stack operands (`SP - 1` and `SP - 2`) are the two values to compare, pushed in left-to-right order (so left is at `SP - 2` and right is at `SP - 1`). Jump only if left (`SP - 2`) is greater-than/equal-to right (`SP - 1`).
-* `JLT` "jump-if-less-than": combine the `LT` and `JT` opcodes. The top of stack (`SP`) holds the absolute address to jump to, and the next two stack operands (`SP - 1` and `SP - 2`) are the two values to compare, pushed in left-to-right order (so left is at `SP - 2` and right is at `SP - 1`). Jump only if left (`SP - 2`) is less-than right (`SP - 1`).
-* `JLTE` "jump-if-less-than-or-equal": combine the `LTE` and `JT` opcodes. The top of stack (`SP`) holds the absolute address to jump to, and the next two stack operands (`SP - 1` and `SP - 2`) are the two values to compare, pushed in left-to-right order (so left is at `SP - 2` and right is at `SP - 1`). Jump only if left (`SP - 2`) is less-than/equal-to right (`SP - 1`).
-* There's dozens more combinations: relative-jump versions of all of the above, for example, or the negative-versions of them ("JNGT", jump if not greater than), to the point where it could get absurd. Choosing just the "right" number of these is a fine art and often requires some trial-and-error. The only way to really know is to write some bytecode programs.
+    ```
+    // Calculate 5!
+    // globals[0] will hold the "factor" (the parameter)
+    // globals[1] will be the "accumulator" (the calculations and final result)
+    /* 0*/ CONST, 5,
+    /* 2*/ GSTORE, 0,   // globals[0] = 5
+    /* 4*/ GLOAD, 0,
+    /* 6*/ GSTORE, 1,   // globals[1] = globals[0]
+    /* 8*/ GLOAD, 0,    // print globals[0]
+    /* 9*/ PRINT,
+    /*11*/ GLOAD, 0,    // globals[0] = globals[0] - 1
+    /*13*/ CONST, 1,
+    /*14*/ SUB,
+    /*16*/ GSTORE, 0,
+    /*18*/ GLOAD, 0,    // globals[0]
+    /*20*/ JZ, 31,      //   ... == 0? if yes, break out of loop
+    /*22*/ GLOAD, 1,    // globals[1] = globals[1] * globals[0]
+    /*24*/ GLOAD, 0,
+    /*25*/ MUL,
+    /*27*/ GSTORE, 1,
+    /*29*/ JMP, 11,     // jump to line 11, our "top of loop"
+    /*31*/ GLOAD, 1,    // print globals[1]
+    /*33*/ PRINT
+    ```

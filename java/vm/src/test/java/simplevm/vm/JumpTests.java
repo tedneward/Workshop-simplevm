@@ -48,7 +48,7 @@ public class JumpTests {
         VirtualMachine vm = new VirtualMachine();
 
         // CONST and FATALs here should be bypassed...
-        vm.Execute(new int[] {
+        vm.execute(new int[] {
             /* 0*/ CONST, 5,
             /* 2*/ RJMPI, // Jump to current IP (2) + 5 => 7
             /* 3*/ CONST, 12,
@@ -58,7 +58,7 @@ public class JumpTests {
         });
 
         // ... leaving nothing on the stack
-        assertEquals(0, vm.Stack.Length);
+        assertEquals(0, vm.getStack().length);
     }
 
     @Test void testLotsofJumps() {
