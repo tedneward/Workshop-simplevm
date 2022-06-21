@@ -153,7 +153,115 @@ public class VirtualMachine {
                 trace("NEG");
                 push(- pop());
                 break;
+
+            // Comparison ops
+            case EQ:
+            {
+                trace("EQ");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs == rhs ? 1 : 0);
+                break;
             }
+            case NEQ:
+            {
+                trace("NEQ");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs != rhs ? 1 : 0);
+                break;
+            }
+            case GT:
+            {
+                trace("GT");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs > rhs ? 1 : 0);
+                break;
+            }
+            case LT:
+            {
+                trace("LT");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs < rhs ? 1 : 0);
+                break;
+            }
+            case GTE:
+            {
+                trace("GTE");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs >= rhs ? 1 : 0);
+                break;
+            }
+            case LTE:
+            {
+                trace("LTE");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs <= rhs ? 1 : 0);
+                break;
+            }
+
+            // Branching ops
+            case JMP:
+            {
+                trace("JMP " + operands[0]);
+                ip = operands[0];
+                break;
+            }
+            case RJMP:
+            {
+                trace("RJMP " + operands[0]);
+                ip += operands[0];
+                break;
+            }
+            case JMPI:
+            {
+                trace("JMPI");
+                int location = pop();
+                ip = location;
+                break;
+            }
+            case RJMPI:
+            {
+                trace("RJMPI");
+                int offset = pop();
+                ip += offset;
+                break;
+            }
+            case JZ:
+            {
+                trace("JZ " + operands[0]);
+                int jump = pop();
+                if (jump == 0) { 
+                    ip = operands[0];
+                }
+                break;
+            }
+            case JNZ:
+            {
+                trace("JNZ " + operands[0]);
+                int jump = pop();
+                if (jump != 0) { 
+                    ip = operands[0];
+                }
+                break;
+            }
+        }
     }
     int ip = 0;
     public void execute(int[] code) {
