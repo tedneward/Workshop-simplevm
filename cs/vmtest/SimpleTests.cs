@@ -1,5 +1,7 @@
 namespace vmtest;
 
+using vm;
+
 [TestClass]
 public class SimpleTests
 {

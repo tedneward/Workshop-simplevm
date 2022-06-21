@@ -274,6 +274,7 @@ public class VirtualMachine {
                     return;
 
                 // 0-operand opcodes
+                //
                 case NOP:
                 case TRACE:
                 case DUMP:
@@ -287,14 +288,36 @@ public class VirtualMachine {
                 case MOD:
                 case ABS:
                 case NEG:
+                case EQ:
+                case NEQ:
+                case GT:
+                case LT:
+                case GTE:
+                case LTE:
                     execute(code[ip]);
                     ip++;
                     break;
-                
+
+                case JMPI:
+                case RJMPI:
+                case RET:
+                    execute(code[ip]);
+                    // Do NOT adjust ip
+                    break;
+
                 // 1-operand opcodes
+                //
                 case CONST:
                     execute(code[ip], code[ip + 1]);
                     ip += 2;
+                    break;
+
+                case JMP:
+                case RJMP:
+                case JZ:
+                case JNZ:
+                    execute(code[ip], code[ip + 1]);
+                    // Do NOT adjust ip
                     break;
 
                 // 2-operand (or more) opcodes

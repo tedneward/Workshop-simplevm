@@ -108,7 +108,7 @@ public class VirtualMachine
 
 
 
-    public void Execute(Bytecode opcode, params int operands)
+    public void Execute(Bytecode opcode, params int[] operands)
     {
         switch (opcode)
         {
@@ -201,6 +201,100 @@ public class VirtualMachine
                 break;
             }
             
+            // Comparison ops
+            case Bytecode.EQ:
+            {
+                Trace("EQ");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs == rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.NEQ:
+            {
+                Trace("NEQ");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs != rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.GT:
+            {
+                Trace("GT");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs > rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.LT:
+            {
+                Trace("LT");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs < rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.GTE:
+            {
+                Trace("GTE");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs >= rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.LTE:
+            {
+                Trace("LTE");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs <= rhs ? 1 : 0);
+                break;
+            }
+
+            // Branching
+            //
+            case Bytecode.JMP:
+            {
+                Trace("JMP " + operands[0]);
+                IP = operands[0];
+                break;
+            }
+            case Bytecode.RJMP:
+            {
+                Trace("RJMP " + operands[0]);
+                IP += operands[0];
+                break;
+            }
+            case Bytecode.JMPI:
+            {
+                int location = Pop();
+                Trace("JMPI " + location);
+                IP = location;
+                break;
+            }
+            case Bytecode.RJMPI:
+            {
+                int offset = Pop();
+                Trace("RJMPI " + offset);
+                IP += offset;
+                break;
+            }
+            case Bytecode.JZ:
+            {
+                Trace("JZ " + operands[0]);
+                if (Pop() == 0) {
+                    IP = operands[0];
+                }
+                break;
+            }
+            case Bytecode.JNZ:
+            {
+                Trace("JNZ " + operands[0]);
+                if (Pop() != 0) {
+                    IP = operands[0];
+                }
+                break;
+            }
         }
     }
     int IP = -1;
@@ -218,13 +312,28 @@ public class VirtualMachine
                 case Bytecode.PRINT:
                 case Bytecode.FATAL:
                 case Bytecode.POP:
+                case Bytecode.ADD:
+                case Bytecode.SUB:
+                case Bytecode.MUL:
+                case Bytecode.DIV:
+                case Bytecode.MOD:
+                case Bytecode.ABS:
+                case Bytecode.NEG:
+                case Bytecode.EQ:
+                case Bytecode.NEQ:
+                case Bytecode.GT:
+                case Bytecode.LT:
+                case Bytecode.GTE:
+                case Bytecode.LTE:
                     Execute(opcode);
+                    IP += 1;
                     break;
 
                 // 1-operand opcodes
                 case Bytecode.CONST:
-                    int operand = (int)code[++IP];
+                    int operand = (int)code[IP + 1];
                     Execute(opcode, operand);
+                    IP += 2;
                     break;
 
                 // 2-operand opcodes
@@ -237,7 +346,6 @@ public class VirtualMachine
                 default:
                     throw new Exception("Unrecognized opcode: " + code[IP]);
             }
-            IP++;
         }
     }
 }

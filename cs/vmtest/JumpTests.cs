@@ -66,7 +66,7 @@ public class JumpTests
 
         // CONST and FATALs here should be bypassed...
         vm.Execute(new Bytecode[] {
-            /* 0*/ Bytecode.CONST, 5,
+            /* 0*/ Bytecode.CONST, (Bytecode)5,
             /* 2*/ Bytecode.RJMPI, // Jump to current IP (2) + 5 => 7
             /* 3*/ Bytecode.CONST, (Bytecode)12,
             /* 5*/ Bytecode.FATAL,
