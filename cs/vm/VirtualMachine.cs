@@ -72,9 +72,7 @@ public class VirtualMachine
         Console.WriteLine("IP: {0} / Trace: {1}", IP, trace);
         Console.WriteLine("Working stack (SP {0}): {1}", SP, String.Join(", ", Stack));
         // Uncomment when you implement global values
-        /*
         Console.WriteLine("Globals: {0}", Globals);
-        */
         // Uncomment when you implement CallFrames (procedures)
         /*
         Console.WriteLine("Call stack: ");
@@ -107,8 +105,13 @@ public class VirtualMachine
     }
 
 
+    // Globals
+    //
+    public int[] globals = new int[32];
+    public int[] Globals { get { return globals; } }
 
-    public void Execute(Bytecode opcode, params int operands)
+
+    public void Execute(Bytecode opcode, params int[] operands)
     {
         switch (opcode)
         {
@@ -200,7 +203,118 @@ public class VirtualMachine
                 Push(-val);
                 break;
             }
-            
+
+            // Comparison ops
+            case Bytecode.EQ:
+            {
+                Trace("EQ");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs == rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.NEQ:
+            {
+                Trace("NEQ");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs != rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.GT:
+            {
+                Trace("GT");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs > rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.LT:
+            {
+                Trace("LT");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs < rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.GTE:
+            {
+                Trace("GTE");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs >= rhs ? 1 : 0);
+                break;
+            }
+            case Bytecode.LTE:
+            {
+                Trace("LTE");
+                int rhs = Pop();
+                int lhs = Pop();
+                Push(lhs <= rhs ? 1 : 0);
+                break;
+            }
+
+            // Branching
+            //
+            case Bytecode.JMP:
+            {
+                Trace("JMP " + operands[0]);
+                IP = operands[0];
+                break;
+            }
+            case Bytecode.RJMP:
+            {
+                Trace("RJMP " + operands[0]);
+                IP += operands[0];
+                break;
+            }
+            case Bytecode.JMPI:
+            {
+                int location = Pop();
+                Trace("JMPI " + location);
+                IP = location;
+                break;
+            }
+            case Bytecode.RJMPI:
+            {
+                int offset = Pop();
+                Trace("RJMPI " + offset);
+                IP += offset;
+                break;
+            }
+            case Bytecode.JZ:
+            {
+                Trace("JZ " + operands[0]);
+                if (Pop() == 0) {
+                    IP = operands[0];
+                }
+                break;
+            }
+            case Bytecode.JNZ:
+            {
+                Trace("JNZ " + operands[0]);
+                if (Pop() != 0) {
+                    IP = operands[0];
+                }
+                break;
+            }
+
+            // Globals
+            //
+            case Bytecode.GSTORE:
+            {
+                Trace("GSTORE " + operands[0]);
+                int index = operands[0];
+                globals[index] = Pop();
+                break;
+            }
+            case Bytecode.GLOAD:
+            {
+                Trace("GLOAD " + operands[0]);
+                int index = operands[0];
+                Push(globals[index]);
+                break;
+            }            
         }
     }
     int IP = -1;
@@ -212,19 +326,53 @@ public class VirtualMachine
             switch (opcode)
             {
                 // 0-operand opcodes
+                //
                 case Bytecode.NOP:
                 case Bytecode.DUMP:
                 case Bytecode.TRACE:
                 case Bytecode.PRINT:
                 case Bytecode.FATAL:
                 case Bytecode.POP:
+                case Bytecode.ADD:
+                case Bytecode.SUB:
+                case Bytecode.MUL:
+                case Bytecode.DIV:
+                case Bytecode.MOD:
+                case Bytecode.ABS:
+                case Bytecode.NEG:
+                case Bytecode.EQ:
+                case Bytecode.NEQ:
+                case Bytecode.GT:
+                case Bytecode.LT:
+                case Bytecode.GTE:
+                case Bytecode.LTE:
                     Execute(opcode);
+                    IP += 1;
+                    break;
+
+                case Bytecode.JMPI:
+                case Bytecode.RJMPI:
+                case Bytecode.RET:
+                    Execute(opcode);
+                    // Do NOT adjust IP
                     break;
 
                 // 1-operand opcodes
+                //
                 case Bytecode.CONST:
-                    int operand = (int)code[++IP];
+                case Bytecode.GSTORE:
+                case Bytecode.GLOAD:
+                    int operand = (int)code[IP + 1];
                     Execute(opcode, operand);
+                    IP += 2;
+                    break;
+                
+                case Bytecode.JMP:
+                case Bytecode.RJMP:
+                case Bytecode.JZ:
+                case Bytecode.JNZ:
+                    Execute(opcode, (int)code[IP + 1]);
+                    // Do NOT adjust IP
                     break;
 
                 // 2-operand opcodes
@@ -237,7 +385,6 @@ public class VirtualMachine
                 default:
                     throw new Exception("Unrecognized opcode: " + code[IP]);
             }
-            IP++;
         }
     }
 }

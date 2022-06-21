@@ -30,8 +30,8 @@ public class VirtualMachine {
         System.out.println("=============");
         System.out.println("IP: " + ip);
         System.out.println("Working stack (SP " + sp + "): " + Arrays.toString(Arrays.copyOfRange(stack, 0, sp+1)));
-        /*
         System.out.println("Globals: " + Arrays.toString(globals));
+        /*
         System.out.println("Call stack: ");
         for (int f = frames.size(); f != 0; f--) {
             CallFrame cf = frames.get(f - 1);
@@ -60,6 +60,13 @@ public class VirtualMachine {
         int result = stack[sp--];
         trace("---> popped ; stack: " + Arrays.toString(Arrays.copyOfRange(stack, 0, sp+1)));
         return result;
+    }
+
+    // Globals
+    //
+    int[] globals = new int[32];
+    int[] getGlobals() {
+        return globals;
     }
 
     public void execute(int opcode, int... operands) {
@@ -153,7 +160,130 @@ public class VirtualMachine {
                 trace("NEG");
                 push(- pop());
                 break;
+            
+            // Comparison ops
+            case EQ:
+            {
+                trace("EQ");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs == rhs ? 1 : 0);
+                break;
             }
+            case NEQ:
+            {
+                trace("NEQ");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs != rhs ? 1 : 0);
+                break;
+            }
+            case GT:
+            {
+                trace("GT");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs > rhs ? 1 : 0);
+                break;
+            }
+            case LT:
+            {
+                trace("LT");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs < rhs ? 1 : 0);
+                break;
+            }
+            case GTE:
+            {
+                trace("GTE");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs >= rhs ? 1 : 0);
+                break;
+            }
+            case LTE:
+            {
+                trace("LTE");
+                // Left-to-right-pushed parameter order
+                // means we extract in reverse order
+                int rhs = pop();
+                int lhs = pop();
+                push(lhs <= rhs ? 1 : 0);
+                break;
+            }
+
+            // Branching ops
+            case JMP:
+            {
+                trace("JMP " + operands[0]);
+                ip = operands[0];
+                break;
+            }
+            case RJMP:
+            {
+                trace("RJMP " + operands[0]);
+                ip += operands[0];
+                break;
+            }
+            case JMPI:
+            {
+                trace("JMPI");
+                int location = pop();
+                ip = location;
+                break;
+            }
+            case RJMPI:
+            {
+                trace("RJMPI");
+                int offset = pop();
+                ip += offset;
+                break;
+            }
+            case JZ:
+            {
+                trace("JZ " + operands[0]);
+                int jump = pop();
+                if (jump == 0) { 
+                    ip = operands[0];
+                }
+                break;
+            }
+            case JNZ:
+            {
+                trace("JNZ " + operands[0]);
+                int jump = pop();
+                if (jump != 0) { 
+                    ip = operands[0];
+                }
+                break;
+            }
+
+            // Globals
+            //
+            case GLOAD:
+            {
+                trace("GLOAD " + operands[0]);
+                push(globals[operands[0]]);
+                break;
+            }
+            case GSTORE:
+            {
+                trace("GSTORE " + operands[0]);
+                globals[operands[0]] = pop();
+                break;
+            }
+        }
     }
     int ip = 0;
     public void execute(int[] code) {
@@ -179,14 +309,37 @@ public class VirtualMachine {
                 case MOD:
                 case ABS:
                 case NEG:
+                case EQ:
+                case NEQ:
+                case GT:
+                case LT:
+                case GTE:
+                case LTE:
                     execute(code[ip]);
                     ip++;
                     break;
-                
+
+                case JMPI:
+                case RJMPI:
+                case RET:
+                    execute(code[ip]);
+                    // Do NOT adjust IP
+                    break;
+                    
                 // 1-operand opcodes
                 case CONST:
+                case GLOAD:
+                case GSTORE:
                     execute(code[ip], code[ip + 1]);
                     ip += 2;
+                    break;
+
+                case JMP:
+                case RJMP:
+                case JZ:
+                case JNZ:
+                    execute(code[ip], code[ip + 1]);
+                    // Do NOT adjust IP
                     break;
 
                 // 2-operand (or more) opcodes

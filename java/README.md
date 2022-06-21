@@ -11,77 +11,37 @@ The root Gradle settings.gradle.kts contains references to the `vm` project, whi
 ## Running tests
 `gradle test` from the top-level directory, or drop into `vm` and `gradle test` from there (which is slightly faster).
 
-## Step 3: Global storage
-`git checkout step-3`
+## Step 4: Locals and procedures
+`git checkout step-4`
 
-Globals may seem a strange thing to implement next, but they help round out the last bits of a functional virtual machine: variable storage and retrieval.
+Procedure calls, from an assembly-level perspective, are essentially a formalized convention around three things:
 
-> **NOTE:** Despite the negative connotations that might be associated with the term "globals", global storage is present in every virtual machine of note, though it is often used for purposes not directly identified. In the JVM, for example, it is in "global storage" areas that static variables are stored (which is what allows them to survive indefinitely if they are objects). Take care to differentiate this "static storage" from general-purpose "heap" storage--that is typically a different sort of storage altogether, and is typically managed automatically (aka garbage-collected).
+* the location of parameters to the procedure call,
+* the location of the return address, and
+* a scheme by which local variables can be declared and reclaimed at the termination of the procedure call
 
-There's only two points of implementation required to give us global storage:
+For the simplevm, we will create a collection of "stack frames" (also known as "activation records", or by the more colloquial "call stack") that exist as a separate entity to the operations stack. While a more close-to-x86 representation would have us store procedure parameters and local variables on the stack, it's much (*much*) easier to have a separate data structure to store the call stack--generate stack traces, for example, is much easier when there's a formal list of each call, along with the locals allocated within that stack frame.
 
-* Implement the storage mechanism itself. In the case of simplevm, we will use another fixed-size array of 32 integers to represent all the global storage we will want or need. Create this array as a field (`globals`) in the `VirtualMachine`, and create a method (`getGlobals`) to access the array by index to load/store values.
+> **NOTE:** This approach is the exact same approach as used by the JVM and CLR. Remember, everything we do here is an abstraction, and when (if) the simplevm reaches the point of doing JIT compilation to native CPU instructions, we would generation machine code to use the approach required by whatever the CPU's convention is.
 
-> **NOTE:** If this were a longer-lived, more-sophisticated system, we might create some conventions around specific use-cases for certain indices of these globals, effectively turning them into general-purpose registers. In fact, given the way we've implemented the stack pointer, it wouldn't be that hard to make the decision that `globals[0]` is the stack pointer, and refactor all of the `sp`-related code accordingly. That way, if there are any additional "registers" we feel like implementing, we need only set the convention accordingly.
+The first thing we require is a `CallFrame` type (which we will drop into a `LinkedList` called `frames` and grow/shrink as calls are created). This `CallFrame` will contain only a few things:
 
-* Implement the `GSTORE` and `GLOAD` opcodes. `GSTORE` takes an index (into the globals array) and stores the top of the stack into that global; `GLOAD` also takes an index, and pushes the value found at that index in the globals array onto the operations stack.
+* an int array called `locals`, which is where locals to the procedure will be allocated,
+* an int called `returnAddress`, which will contain the IP location for where we wish to return when this procedure is finished
+* a constructor to initialize `locals` to a fixed-size array of 32 integers. (**NOTE:** in some VMs, such as the JVM, the size of the locals storage space is determined at runtime by some metadata defined as part of the code being loaded--in the JVM, you can see this in `javap`-generated output as "locals: x". As it turns out, the JVM actually stores a great deal of information about locals in methods as part of its metadata, but only retains it if the "debug" flag is on during `javac` compilation.)
 
-## Interlude: Write some bytecode!
-The addition of globals to the system gives us pretty much all the basics we need to do some more-extensive tests/experiments. Consider some of the bytecode patterns displayed below, and explore what additional ones you could write. (Note: No guarantees that these all work without bugs--writing assembly is not easy!)
+Thus:
 
-* Even or odd (if/then/else)
+* create the `CallFrame` type; if you choose to nest it inside of `VirtualMachine.java`, make sure it is declared as a "static" class, so that it doesn't drag along a pointer to the `VirtualMachine` in each and every instance of the `CallFrame`.
+* create a field in the `VirtualMachine` called `frames` that is a `LinkedList` of `CallFrames`
+* create a method in the `VirtualMachine` called `fp` that will return the topmost `CallFrame`. ("fp" is our "frame pointer", which should always point to the currently-active call frame.)
 
-    ```
-    /* 0*/ CONST, 5,    // Define the value to be tested
-    /* 2*/ CONST, 2,    // Push 2 
-    /* 4*/ MOD,         // Mod
-    /* 5*/ DUMP,        // Let's see what's on the stack
-    /* 6*/ JZ, 9,       // If it's 0, it divided evenly
-    /* 8*/ FATAL,       // 5 % 2 shouldn't be 0!
-    /* 9*/ NOP
-    ```
+Once that's in place, we can implement the four opcodes that will give us procedure call and locals support:
 
-* 3... 2... 1... blastoff (do/while): count down from 5 to 0
+* `CALL` will expect an address (integer offset into the code) as an operand. It will immediately create a new `CallFrame`, capture the return address (current IP plus 2), and add the `CallFrame` to `frames`.
+* `RET` will look at the current `CallFrame`, extract the `returnAddress`, set `ip` to point to that value, and then remove the current `CallFrame` from `frames` entirely.
+* `STORE` and `LOAD` will operate exactly as `GSTORE` and `GLOAD` do, with the caveat that they will modify the `locals` of the current `CallFrame` (instead of `globals`, as the `GSTORE`/`GLOAD` opcodes do).
 
-    ```
-    /* 0*/ GSTORE, 0,   // move count into globals[0]
-    /* 2*/ GLOAD, 0,    // print globals[0]
-    /* 4*/ PRINT,       // 
-    /* 5*/ GLOAD, 0,    // globals[0]
-    /* 7*/ CONST, 0,    // 0
-    /* 9*/ EQ,          // globals[0] == 0 ?
-    /*10*/ JNZ, 20,     // jump to end
-    /*12*/ GLOAD, 0,    // globals[0] = globals[0] - 1
-    /*14*/ CONST, 1,    // 
-    /*15*/ SUB,
-    /*17*/ GSTORE, 0,
-    /*19*/ JMP, 2,      // jump to top of loop
-    /*20*/ NOP          // all done
-    ```
+At this point, if the tests pass, you have completed the simplevm workshop! You now have a working, highly-inefficient, overly-simplistic stack-based virtual machine, with a barely-documented bytecode set that is missing any interesting features whatsoever! Fame and fortune are sure to be yours.
 
-* Factorial (non-recursive)
-
-    ```
-    // Calculate 5!
-    // globals[0] will hold the "factor" (the parameter)
-    // globals[1] will be the "accumulator" (the calculations and final result)
-    /* 0*/ CONST, 5,
-    /* 2*/ GSTORE, 0,   // globals[0] = 5
-    /* 4*/ GLOAD, 0,
-    /* 6*/ GSTORE, 1,   // globals[1] = globals[0]
-    /* 8*/ GLOAD, 0,    // print globals[0]
-    /* 9*/ PRINT,
-    /*11*/ GLOAD, 0,    // globals[0] = globals[0] - 1
-    /*13*/ CONST, 1,
-    /*14*/ SUB,
-    /*16*/ GSTORE, 0,
-    /*18*/ GLOAD, 0,    // globals[0]
-    /*20*/ JZ, 31,      //   ... == 0? if yes, break out of loop
-    /*22*/ GLOAD, 1,    // globals[1] = globals[1] * globals[0]
-    /*24*/ GLOAD, 0,
-    /*25*/ MUL,
-    /*27*/ GSTORE, 1,
-    /*29*/ JMP, 11,     // jump to line 11, our "top of loop"
-    /*31*/ GLOAD, 1,    // print globals[1]
-    /*33*/ PRINT
-    ```
+It would be an interesting exercise to implement in the `VirtualMachine` the assumption that there is always at least one `CallFrame` active; that is to say, when we call `execute(int[])`, we create a `CallFrame` in which to execute that code. This would also give us locals support at the top-most level of code execution. (That in turn could spark some discussion as to whether we need "globals" when we have "locals" at this topmost level.) However, doing this requires that we always be keeping an eye on the `returnAddress` of any `CallFrame`, because if that points to -1 (or some other signal), it indicates we are at the topmost level of the call stack, and there's no place to return to.
