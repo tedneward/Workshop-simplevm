@@ -285,6 +285,9 @@ public class VirtualMachine
                 if (Pop() == 0) {
                     IP = operands[0];
                 }
+                else {
+                    IP += 2;
+                }
                 break;
             }
             case Bytecode.JNZ:
@@ -292,6 +295,9 @@ public class VirtualMachine
                 Trace("JNZ " + operands[0]);
                 if (Pop() != 0) {
                     IP = operands[0];
+                }
+                else {
+                    IP += 2;
                 }
                 break;
             }
@@ -329,11 +335,25 @@ public class VirtualMachine
                     IP += 1;
                     break;
 
+                case Bytecode.JMPI:
+                case Bytecode.RJMPI:
+                    Execute(opcode);
+                    // Do NOT adjust IP
+                    break;
+
                 // 1-operand opcodes
                 case Bytecode.CONST:
                     int operand = (int)code[IP + 1];
                     Execute(opcode, operand);
                     IP += 2;
+                    break;
+
+                case Bytecode.JMP:
+                case Bytecode.RJMP:
+                case Bytecode.JZ:
+                case Bytecode.JNZ:
+                    Execute(code[IP], (int)code[IP + 1]);
+                    // Do NOT adjust IP
                     break;
 
                 // 2-operand opcodes
