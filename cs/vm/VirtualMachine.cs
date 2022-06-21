@@ -288,6 +288,9 @@ public class VirtualMachine
                 if (Pop() == 0) {
                     IP = operands[0];
                 }
+                else {
+                    IP += 2;
+                }
                 break;
             }
             case Bytecode.JNZ:
@@ -295,6 +298,9 @@ public class VirtualMachine
                 Trace("JNZ " + operands[0]);
                 if (Pop() != 0) {
                     IP = operands[0];
+                }
+                else {
+                    IP += 2;
                 }
                 break;
             }

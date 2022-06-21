@@ -257,6 +257,9 @@ public class VirtualMachine {
                 if (jump == 0) { 
                     ip = operands[0];
                 }
+                else {
+                    ip += 2;
+                }
                 break;
             }
             case JNZ:
@@ -265,6 +268,9 @@ public class VirtualMachine {
                 int jump = pop();
                 if (jump != 0) { 
                     ip = operands[0];
+                }
+                else {
+                    ip += 2;
                 }
                 break;
             }
